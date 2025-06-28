@@ -1,5 +1,6 @@
 "use client";
 import React, { useRef, useState } from "react";
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 
 export default function Home() {
 	const [running, setRunning] = useState(false);
