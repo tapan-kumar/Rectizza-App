@@ -1,4 +1,3 @@
- 
 "use client";
 import React, { useRef, useState } from "react";
 
@@ -48,7 +47,7 @@ export default function Home() {
 		recognition.continuous = false;
 		recognition.onresult = (event) => {
 			const spoken = event.results[0][0].transcript.toLowerCase().trim();
-			if (spoken.includes("hello".toLocaleLowerCase())) {
+			if (spoken.includes("rectizza".toLocaleLowerCase())) {
 				wordSaid.current = true;
 				startTime.current = Date.now();
 				runCountdown();
@@ -117,8 +116,8 @@ export default function Home() {
 				</div>
 
 				<p className="mt-4 text-sm text-gray-600">
-					Say <strong>&quot;Rectizza&quot;</strong> and hold it! The longer you shout, the
-					bigger the bite.
+					Say <strong>&quot;Rectizza&quot;</strong> and hold it! The longer you
+					shout, the bigger the bite.
 				</p>
 
 				<button
