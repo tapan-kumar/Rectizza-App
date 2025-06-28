@@ -1,6 +1,24 @@
+ 
 "use client";
 import React, { useRef, useState } from "react";
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
+// Define a minimal SpeechRecognitionEvent type for onresult
+interface MinimalSpeechRecognitionEvent {
+	results: {
+		[key: number]: {
+			[key: number]: { transcript: string };
+		};
+	};
+}
+
+// Define a minimal SpeechRecognition type for better typing
+interface MinimalSpeechRecognition {
+	lang: string;
+	continuous: boolean;
+	onresult: ((event: MinimalSpeechRecognitionEvent) => void) | null;
+	onerror: (() => void) | null;
+	start: () => void;
+}
 
 export default function Home() {
 	const [running, setRunning] = useState(false);
@@ -25,11 +43,10 @@ export default function Home() {
 			return;
 		}
 
-		const recognition = new SpeechRecognition();
+		const recognition = new SpeechRecognition() as MinimalSpeechRecognition;
 		recognition.lang = "en-US";
 		recognition.continuous = false;
-
-		recognition.onresult = (event: any) => {
+		recognition.onresult = (event) => {
 			const spoken = event.results[0][0].transcript.toLowerCase().trim();
 			if (spoken.includes("hello".toLocaleLowerCase())) {
 				wordSaid.current = true;
@@ -42,7 +59,6 @@ export default function Home() {
 				);
 			}
 		};
-
 		recognition.onerror = () => setError("Speech recognition failed.");
 
 		recognition.start();
@@ -50,7 +66,7 @@ export default function Home() {
 
 	const runCountdown = () => {
 		setRunning(true);
-		let duration = 4;
+		const duration = 4;
 		let tick = 4;
 		setCountdown(tick);
 
@@ -101,7 +117,7 @@ export default function Home() {
 				</div>
 
 				<p className="mt-4 text-sm text-gray-600">
-					Say <strong>"Rectizza"</strong> and hold it! The longer you shout, the
+					Say <strong>&quot;Rectizza&quot;</strong> and hold it! The longer you shout, the
 					bigger the bite.
 				</p>
 
