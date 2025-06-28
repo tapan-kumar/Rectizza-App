@@ -1,103 +1,140 @@
-import Image from "next/image";
+"use client";
+import React, { useRef, useState } from "react";
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+	const [running, setRunning] = useState(false);
+	const [countdown, setCountdown] = useState(4);
+	const [discount, setDiscount] = useState<number | null>(null);
+	const [error, setError] = useState<string | null>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+	const startTime = useRef<number>(0);
+	const wordSaid = useRef<boolean>(false);
+
+	const handleStart = () => {
+		setDiscount(null);
+		setError(null);
+		setCountdown(4);
+
+		const SpeechRecognition =
+			(typeof window !== "undefined" && (window as any).SpeechRecognition) ||
+			(window as any).webkitSpeechRecognition;
+
+		if (!SpeechRecognition) {
+			setError("Speech recognition not supported.");
+			return;
+		}
+
+		const recognition = new SpeechRecognition();
+		recognition.lang = "en-US";
+		recognition.continuous = false;
+
+		recognition.onresult = (event: any) => {
+			const spoken = event.results[0][0].transcript.toLowerCase().trim();
+			if (spoken.includes("hello".toLocaleLowerCase())) {
+				wordSaid.current = true;
+				startTime.current = Date.now();
+				runCountdown();
+			} else {
+				wordSaid.current = false;
+				setError(
+					`❌ Heard "${spoken}" — but only "Rectizza" unlocks flavor points!`
+				);
+			}
+		};
+
+		recognition.onerror = () => setError("Speech recognition failed.");
+
+		recognition.start();
+	};
+
+	const runCountdown = () => {
+		setRunning(true);
+		let duration = 4;
+		let tick = 4;
+		setCountdown(tick);
+
+		const timer = setInterval(() => {
+			tick--;
+			setCountdown(tick);
+			if (tick <= 0) clearInterval(timer);
+		}, 1000);
+
+		setTimeout(() => {
+			const spokenDuration = (Date.now() - startTime.current) / 1000;
+			setRunning(false);
+
+			if (!wordSaid.current || spokenDuration < 2) {
+				setError(
+					'🛑 Say "Rectizza" and hold it at least 2 seconds to earn a discount!'
+				);
+				return;
+			}
+
+			const finalDiscount = Math.min(50, Math.floor(spokenDuration * 10));
+			setDiscount(finalDiscount);
+		}, duration * 1000);
+	};
+
+	return (
+		<main className="min-h-screen flex flex-col items-center bg-[#ffe8cc] font-sans text-[#1f1f1f]">
+			{/* 🔥 Top Header */}
+			<header className="text-center py-6">
+				<h1 className="text-5xl font-extrabold text-[#ff5722] tracking-tight">
+					RECTIZZA YELL CHALLENGE
+				</h1>
+				<p className="mt-2 text-sm text-[#333] uppercase">
+					The louder you shout, the more you save
+				</p>
+			</header>
+
+			{/* 🎤 Voice Capture Card */}
+			<section className="bg-white shadow-lg rounded-3xl px-6 py-8 w-full max-w-md text-center relative">
+				<div
+					className={`rounded-full w-28 h-28 mx-auto flex items-center justify-center text-4xl font-bold transition-all duration-300 ${
+						running
+							? "bg-[#d72638]/80 animate-pulse text-white"
+							: "bg-[#ff5722] text-white"
+					}`}
+				>
+					🎤
+				</div>
+
+				<p className="mt-4 text-sm text-gray-600">
+					Say <strong>"Rectizza"</strong> and hold it! The longer you shout, the
+					bigger the bite.
+				</p>
+
+				<button
+					onClick={handleStart}
+					disabled={running}
+					className={`mt-6 w-full py-3 rounded-full font-semibold transition-all duration-200 ${
+						running
+							? "bg-gray-300 text-gray-500 cursor-not-allowed"
+							: "bg-[#ff5722] text-white hover:bg-[#e64a19]"
+					}`}
+				>
+					{running ? "Listening…" : "Start Challenge"}
+				</button>
+
+				{running && (
+					<div className="mt-4 text-[#ff5722] text-xl font-bold animate-pulse">
+						⏱ {countdown}s
+					</div>
+				)}
+
+				{discount !== null && (
+					<div className="mt-6 bg-[#2ecc71]/10 border border-[#2ecc71] rounded-lg py-4 px-6 shadow text-[#2ecc71] font-semibold text-2xl">
+						🎉 You unlocked {discount}% OFF!
+					</div>
+				)}
+
+				{error && <div className="mt-6 text-red-600 font-medium">{error}</div>}
+			</section>
+
+			{/* 📍 Footer */}
+			<footer className="mt-10 text-xs text-gray-500 text-center pb-6">
+				© {new Date().getFullYear()} Rectizza. Crunch louder, save hotter. 🍕
+			</footer>
+		</main>
+	);
 }
