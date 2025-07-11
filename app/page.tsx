@@ -6,7 +6,6 @@ import React, { useRef, useState } from "react";
 export default function Home() {
 	const [recording, setRecording] = useState(false);
 	const [running, setRunning] = useState(false);
-	const [countdown, setCountdown] = useState(4);
 	const [discount, setDiscount] = useState<number | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [transcript, setTranscript] = useState<string>("");
@@ -26,7 +25,6 @@ export default function Home() {
 		setTranscript("");
 		setVolume(0);
 		setDuration(0);
-		setCountdown(4);
 		speakingRef.current = false;
 
 		if (!navigator.mediaDevices?.getUserMedia) {
@@ -40,7 +38,6 @@ export default function Home() {
 			const recorder = new MediaRecorder(stream);
 			chunksRef.current = [];
 			setRecording(true);
-			setCountdown(4);
 			startTimeRef.current = Date.now();
 
 			// Web Audio API for loudness
@@ -54,8 +51,6 @@ export default function Home() {
 			let maxRMS = 0;
 			let rmsSum = 0;
 			let rmsCount = 0;
-			let speakingStart = 0;
-			let speakingDuration = 0;
 
 			const getRMS = (analyser: AnalyserNode) => {
 				const arr = new Uint8Array(analyser.fftSize);
@@ -76,7 +71,7 @@ export default function Home() {
 					// threshold for "speaking"
 					if (!speakingRef.current) {
 						speakingRef.current = true;
-						speakingStart = Date.now();
+						startTimeRef.current = Date.now();
 					}
 					maxRMS = Math.max(maxRMS, rms);
 					rmsSum += rms;
@@ -84,7 +79,6 @@ export default function Home() {
 				} else {
 					if (speakingRef.current) {
 						speakingRef.current = false;
-						speakingDuration += (Date.now() - speakingStart) / 1000;
 					}
 				}
 			};
@@ -138,11 +132,12 @@ export default function Home() {
 						(Date.now() - startTimeRef.current) /
 						1000
 					).toFixed(2);
-					const avgRMS = rmsCount ? rmsSum / rmsCount : 0;
-					const loudnessScore = Math.min(1, maxRMS * 2); // scale to 0-1
-					const durationScore = Math.min(1, Number(totalDuration) / 4); // 4s max
 					let finalDiscount = 0;
 					if (matched) {
+						// Calculate loudnessScore and durationScore
+						const avgRMS = rmsCount > 0 ? rmsSum / rmsCount : 0;
+						const loudnessScore = Math.min(avgRMS / 0.5, 1); // normalize to [0,1], assuming 0.5 is "max" loudness
+						const durationScore = Math.min(Number(totalDuration) / 4, 1); // normalize to [0,1], 4s max
 						// Weighted: 60% loudness, 40% duration
 						finalDiscount = Math.round(
 							(loudnessScore * 0.6 + durationScore * 0.4) * 50
@@ -151,11 +146,15 @@ export default function Home() {
 					setDiscount(finalDiscount);
 					setDuration(Number(totalDuration));
 					if (!matched) {
-						setError(
-							`❌ Heard "${data.transcript}" — but only "Rectizza" (or close) unlocks flavor points!`
-						);
+						if (!data.transcript || data.transcript.trim() === "") {
+							setError("🗣️ Please speak to win the discount!");
+						} else {
+							setError(
+								`❌ Heard &quot;${data.transcript}&quot; — but only &quot;Rectizza&quot; (or close) unlocks flavor points!`
+							);
+						}
 					}
-				} catch (err) {
+				} catch {
 					setError("Transcription failed. Please try again.");
 				} finally {
 					setRunning(false);
@@ -166,37 +165,9 @@ export default function Home() {
 			setTimeout(() => {
 				recorder.stop();
 			}, 4000);
-		} catch (err) {
+		} catch {
 			setError("Could not access microphone. Please allow microphone access.");
 		}
-	};
-
-	const runCountdown = () => {
-		setRunning(true);
-		const duration = 4;
-		let tick = 4;
-		setCountdown(tick);
-
-		const timer = setInterval(() => {
-			tick--;
-			setCountdown(tick);
-			if (tick <= 0) clearInterval(timer);
-		}, 1000);
-
-		setTimeout(() => {
-			const spokenDuration = (Date.now() - startTimeRef.current) / 1000;
-			setRunning(false);
-
-			if (!wordSaid.current || spokenDuration < 2) {
-				setError(
-					'🛑 Say "Rectizza" and hold it at least 2 seconds to earn a discount!'
-				);
-				return;
-			}
-
-			const finalDiscount = Math.min(50, Math.floor(spokenDuration * 10));
-			setDiscount(finalDiscount);
-		}, duration * 1000);
 	};
 
 	return (
@@ -221,8 +192,8 @@ export default function Home() {
 					🎤
 				</div>
 				<p className="mt-4 text-base text-gray-700">
-					Say <strong className="text-[#d72638]">"Rectizza"</strong> (or close)
-					and hold it!
+					Say <strong className="text-[#d72638]">&quot;Rectizza&quot;</strong>{" "}
+					(or close) and hold it!
 					<br />
 					<span className="text-xs text-gray-500">
 						Longer &amp; louder = bigger discount.
@@ -261,13 +232,13 @@ export default function Home() {
 					</div>
 				)}
 
-				{discount !== null && (
+				{discount !== null && discount > 0 && (
 					<div className="mt-6 bg-[#2ecc71]/10 border border-[#2ecc71] rounded-lg py-4 px-6 shadow text-[#2ecc71] font-semibold text-2xl">
 						🎉 You unlocked{" "}
 						<span className="font-extrabold">{discount}% OFF!</span>
 						<br />
 						<span className="text-base text-[#333]">
-							({duration.toFixed(2)}s, transcript: "{transcript}")
+							({duration.toFixed(2)}s, transcript: &quot;{transcript}&quot;)
 						</span>
 					</div>
 				)}
