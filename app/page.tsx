@@ -6,7 +6,8 @@ import React, { useRef, useState } from "react";
 export default function Home() {
 	const [recording, setRecording] = useState(false);
 	const [running, setRunning] = useState(false);
-	const [discount, setDiscount] = useState<number | null>(null);
+const [discount, setDiscount] = useState<number | null>(null);
+const [coupon, setCoupon] = useState<string>("");
 	const [error, setError] = useState<string | null>(null);
 	const [transcript, setTranscript] = useState<string>("");
 	const [volume, setVolume] = useState<number>(0);
@@ -142,15 +143,28 @@ export default function Home() {
 						finalDiscount = Math.round(
 							(loudnessScore * 0.6 + durationScore * 0.4) * 50
 						);
+						// Generate coupon code
+						const chars = "RECTIZZA0123456789";
+						let code = "";
+						for (let i = 0; i < 8; i++) {
+							code += chars[Math.floor(Math.random() * chars.length)];
+						}
+						setCoupon(code);
+					} else {
+						setCoupon("");
 					}
 					setDiscount(finalDiscount);
 					setDuration(Number(totalDuration));
 					if (!matched) {
-						if (!data.transcript || data.transcript.trim() === "") {
+						const avgRMS = rmsCount > 0 ? rmsSum / rmsCount : 0;
+						if (
+							(!data.transcript || data.transcript.trim() === "") &&
+							avgRMS < 0.13
+						) {
 							setError("🗣️ Please speak to win the discount!");
 						} else {
 							setError(
-								`❌ Heard &quot;${data.transcript}&quot; — but only &quot;Rectizza&quot; (or close) unlocks flavor points!`
+								`❌ Heard ${data.transcript}— but only Rectizza (or close) unlocks flavor points!`
 							);
 						}
 					}
@@ -234,12 +248,16 @@ export default function Home() {
 
 				{discount !== null && discount > 0 && (
 					<div className="mt-6 bg-[#2ecc71]/10 border border-[#2ecc71] rounded-lg py-4 px-6 shadow text-[#2ecc71] font-semibold text-2xl">
-						🎉 You unlocked{" "}
-						<span className="font-extrabold">{discount}% OFF!</span>
+						🎉 You unlocked <span className="font-extrabold">{discount}% OFF!</span>
 						<br />
 						<span className="text-base text-[#333]">
 							({duration.toFixed(2)}s, transcript: &quot;{transcript}&quot;)
 						</span>
+						{coupon && (
+							<div className="mt-4 text-lg text-[#d72638] font-bold">
+								Coupon Code: <span className="bg-white border border-[#d72638] rounded px-2 py-1 tracking-widest">{coupon}</span>
+							</div>
+						)}
 					</div>
 				)}
 
